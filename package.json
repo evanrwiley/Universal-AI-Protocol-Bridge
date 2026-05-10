@@ -7,7 +7,7 @@
     "build": "npm run build:ui && npm run type-check",
     "build:ui": "vite build",
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "npm run build:ui && wrangler deploy",
     "test": "vitest run",
     "test:watch": "vitest",
     "type-check": "tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.app.json"
