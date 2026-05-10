@@ -4,7 +4,7 @@ import { resolveModel, DEFAULT_MODEL_MAP } from '../src/proxy/model-map';
 describe('model-map wildcard resolution', () => {
   test('wildcard match: claude-* maps to gpt-4-*', () => {
     const userMap = { 'claude-*': 'gpt-4-*' } as Record<string, string>;
-    expect(resolveModel('claude-sonnet-4-6', 'openai', userMap)).toBe('gpt-4-sonnet-4-6');
+    expect(resolveModel('claude-sonnet-4-5', 'openai', userMap)).toBe('gpt-4-sonnet-4-5');
   });
 
   test('exact match priority over wildcard in user map', () => {
@@ -33,15 +33,15 @@ describe('model-map wildcard resolution', () => {
   });
 
   test('forceModel overrides everything', () => {
-    const userMap = { 'claude-sonnet-4-6': 'override' } as Record<string, string>;
-    expect(resolveModel('claude-sonnet-4-6', 'openai', userMap, 'forced-model')).toBe('forced-model');
+    const userMap = { 'claude-sonnet-4-5': 'override' } as Record<string, string>;
+    expect(resolveModel('claude-sonnet-4-5', 'openai', userMap, 'forced-model')).toBe('forced-model');
   });
 });
 
 describe('default map without user map', () => {
   test('openai default exact mapping preserves existing behavior', () => {
     // Using a known mapping from DEFAULT_MODEL_MAP for OpenAI
-    const result = resolveModel('claude-sonnet-4-6', 'openai');
-    expect(result).toBe('gpt-4o-mini');
+    const result = resolveModel('claude-sonnet-4-5', 'openai');
+    expect(result).toBe('gpt-4.1');
   });
 });

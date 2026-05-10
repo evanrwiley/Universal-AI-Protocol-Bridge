@@ -3,13 +3,10 @@
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "bundler",
-    "lib": ["ES2022", "WebWorker"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "types": ["@cloudflare/workers-types"],
     "skipLibCheck": true,
-    "outDir": "./dist",
-    "rootDir": "./src"
-  },
-  "include": ["src/**/*"]
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true
+  }
 }

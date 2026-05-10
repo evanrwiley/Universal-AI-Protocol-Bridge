@@ -4,15 +4,15 @@
 export const DEFAULT_MODEL_MAP: Record<string, Record<string, string>> = {
   // When targeting OpenAI-compatible endpoints, map Claude model names to common alternatives
   openai: {
-    'claude-opus-4-6': 'gpt-4o',
-    'claude-sonnet-4-6': 'gpt-4o-mini',
+    'claude-opus-4-5': 'gpt-4.1',
+    'claude-sonnet-4-5': 'gpt-4.1',
     'claude-haiku-4-5': 'gpt-4o-mini',
   },
   // When targeting Gemini
   gemini: {
-    'claude-opus-4-6': 'gemini-2.0-flash',
-    'claude-sonnet-4-6': 'gemini-2.0-flash',
-    'claude-haiku-4-5': 'gemini-1.5-flash',
+    'claude-opus-4-5': 'gemini-2.5-flash',
+    'claude-sonnet-4-5': 'gemini-2.5-flash',
+    'claude-haiku-4-5': 'gemini-2.0-flash',
   },
 };
 

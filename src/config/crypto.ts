@@ -1,4 +1,4 @@
-import type { ProxyConfig } from './types.js';
+import type { ProxyConfigInput } from './types.js';
 
 const ALGORITHM = 'AES-GCM';
 const IV_LENGTH = 12;
@@ -26,7 +26,7 @@ function fromBase64Url(str: string): Uint8Array {
   return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
 }
 
-export async function encryptConfig(config: ProxyConfig, secret: string): Promise<string> {
+export async function encryptConfig(config: ProxyConfigInput, secret: string): Promise<string> {
   const key = await deriveKey(secret);
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
   const plaintext = new TextEncoder().encode(JSON.stringify(config));
@@ -37,13 +37,13 @@ export async function encryptConfig(config: ProxyConfig, secret: string): Promis
   return toBase64Url(combined.buffer);
 }
 
-export async function decryptConfig(token: string, secret: string): Promise<ProxyConfig> {
+export async function decryptConfig(token: string, secret: string): Promise<ProxyConfigInput> {
   const key = await deriveKey(secret);
   const combined = fromBase64Url(token);
   const iv = combined.slice(0, IV_LENGTH);
   const ciphertext = combined.slice(IV_LENGTH);
   const plaintext = await crypto.subtle.decrypt({ name: ALGORITHM, iv }, key, ciphertext);
-  const config = JSON.parse(new TextDecoder().decode(plaintext)) as ProxyConfig;
-  if (config.version !== 1) throw new Error('Unsupported config version');
+  const config = JSON.parse(new TextDecoder().decode(plaintext)) as ProxyConfigInput;
+  if (config.version !== 1 && config.version !== 2) throw new Error('Unsupported config version');
   return config;
 }

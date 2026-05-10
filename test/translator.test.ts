@@ -16,13 +16,13 @@ const openAIConfig: ProxyConfig = {
 describe('Anthropic → Canonical', () => {
   it('parses basic request', () => {
     const req = parseAnthropicRequest({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1024,
       system: 'You are helpful',
       messages: [{ role: 'user', content: 'Hello' }],
       stream: false,
     });
-    expect(req.model).toBe('claude-sonnet-4-6');
+    expect(req.model).toBe('claude-sonnet-4-5');
     expect(req.systemPrompt).toBe('You are helpful');
     expect(req.maxTokens).toBe(1024);
     expect(req.messages[0]?.role).toBe('user');
@@ -31,7 +31,7 @@ describe('Anthropic → Canonical', () => {
 
   it('parses tool_use and tool_result', () => {
     const req = parseAnthropicRequest({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1024,
       messages: [
         { role: 'assistant', content: [{ type: 'tool_use', id: 'tu_1', name: 'get_weather', input: { city: 'NYC' } }] },
@@ -90,7 +90,7 @@ describe('OpenAI → Canonical', () => {
 describe('Canonical → OpenAI', () => {
   it('places system prompt as first message', () => {
     const canonical = parseAnthropicRequest({
-      model: 'claude-sonnet-4-6', max_tokens: 100,
+      model: 'claude-sonnet-4-5', max_tokens: 100,
       system: 'Be helpful',
       messages: [{ role: 'user', content: 'Hi' }],
       stream: false,
@@ -198,8 +198,8 @@ describe('Gemini → Canonical', () => {
       contents: [{ role: 'user', parts: [{ text: 'Hello' }] }],
       systemInstruction: { parts: [{ text: 'Be helpful' }] },
       generationConfig: { maxOutputTokens: 512, temperature: 0.7 },
-    }, '/v1beta/models/gemini-2.0-flash:generateContent');
-    expect(req.model).toBe('gemini-2.0-flash');
+    }, '/v1beta/models/gemini-2.5-flash:generateContent');
+    expect(req.model).toBe('gemini-2.5-flash');
     expect(req.systemPrompt).toBe('Be helpful');
     expect(req.maxTokens).toBe(512);
     expect(req.messages[0]?.role).toBe('user');
@@ -219,22 +219,22 @@ describe('Gemini → Canonical', () => {
 
 describe('resolveModel', () => {
   it('uses DEFAULT_MODEL_MAP when no userModelMap provided', () => {
-    expect(resolveModel('claude-sonnet-4-6', 'openai')).toBe('gpt-4o-mini');
-    expect(resolveModel('claude-opus-4-6', 'openai')).toBe('gpt-4o');
-    expect(resolveModel('claude-sonnet-4-6', 'gemini')).toBe('gemini-2.0-flash');
+    expect(resolveModel('claude-sonnet-4-5', 'openai')).toBe('gpt-4.1');
+    expect(resolveModel('claude-opus-4-5', 'openai')).toBe('gpt-4.1');
+    expect(resolveModel('claude-sonnet-4-5', 'gemini')).toBe('gemini-2.5-flash');
   });
 
   it('strips [1m] suffix before looking up DEFAULT_MODEL_MAP', () => {
-    expect(resolveModel('claude-sonnet-4-6[1m]', 'openai')).toBe('gpt-4o-mini');
-    expect(resolveModel('claude-opus-4-6[1m]', 'openai')).toBe('gpt-4o');
+    expect(resolveModel('claude-sonnet-4-5[1m]', 'openai')).toBe('gpt-4.1');
+    expect(resolveModel('claude-opus-4-5[1m]', 'openai')).toBe('gpt-4.1');
   });
 
   it('userModelMap takes priority over DEFAULT_MODEL_MAP', () => {
-    expect(resolveModel('claude-sonnet-4-6', 'openai', { 'claude-sonnet-4-6': 'gpt-4-turbo' })).toBe('gpt-4-turbo');
+    expect(resolveModel('claude-sonnet-4-5', 'openai', { 'claude-sonnet-4-5': 'gpt-4-turbo' })).toBe('gpt-4-turbo');
   });
 
   it('forceModel takes priority over everything', () => {
-    expect(resolveModel('claude-sonnet-4-6[1m]', 'openai', undefined, 'my-custom-model')).toBe('my-custom-model');
+    expect(resolveModel('claude-sonnet-4-5[1m]', 'openai', undefined, 'my-custom-model')).toBe('my-custom-model');
   });
 
   it('passes through unknown models unchanged', () => {
@@ -247,7 +247,7 @@ describe('resolveModel', () => {
 describe('Anthropic tool_result → Canonical role mapping', () => {
   it('converts user message with tool_result to role: tool', () => {
     const req = parseAnthropicRequest({
-      model: 'claude-sonnet-4-6', max_tokens: 1024,
+      model: 'claude-sonnet-4-5', max_tokens: 1024,
       messages: [
         { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'tu_1', content: 'file content here' }] },
       ],
@@ -259,7 +259,7 @@ describe('Anthropic tool_result → Canonical role mapping', () => {
 
   it('preserves user role for normal text messages', () => {
     const req = parseAnthropicRequest({
-      model: 'claude-sonnet-4-6', max_tokens: 1024,
+      model: 'claude-sonnet-4-5', max_tokens: 1024,
       messages: [{ role: 'user', content: 'Hello' }],
       stream: false,
     });
@@ -270,7 +270,7 @@ describe('Anthropic tool_result → Canonical role mapping', () => {
 describe('End-to-end tool_result: Anthropic → OpenAI', () => {
   it('tool_result content is preserved through translation', () => {
     const canonical = parseAnthropicRequest({
-      model: 'claude-sonnet-4-6', max_tokens: 1024,
+      model: 'claude-sonnet-4-5', max_tokens: 1024,
       messages: [
         { role: 'assistant', content: [{ type: 'tool_use', id: 'tu_1', name: 'Read', input: { file_path: '/test.txt' } }] },
         { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'tu_1', content: 'Hello World' }] },

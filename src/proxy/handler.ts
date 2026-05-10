@@ -1,4 +1,4 @@
-import type { ProxyConfig } from '../config/types.js';
+import type { NormalizedProxyConfig, ProtocolAuth } from '../config/types.js';
 import { ErrorCode, createErrorResponse } from '../config/errors.js';
 import { getAdapter } from '../protocols/registry.js';
 import { createStreamingResponse } from '../streaming/pipeline.js';
@@ -6,12 +6,27 @@ import { resolveModel } from './model-map.js';
 import { signRequest } from '../protocols/bedrock/sigv4.js';
 import { getEffectiveAuth } from './key-rotation.js';
 import { withRetry } from './retry.js';
+import { buildPassthroughUrl, decideRoute } from './endpoints.js';
 
 export async function handleProxyRequest(
   request: Request,
-  config: ProxyConfig,
+  config: NormalizedProxyConfig,
   upstreamPath: string
 ): Promise<Response> {
+  const route = decideRoute(config, upstreamPath);
+  if (route.action === 'reject') {
+    return createErrorResponse(ErrorCode.UNSUPPORTED_ENDPOINT, route.message, undefined, {
+      provider: config.provider,
+      endpointGroup: route.endpointGroup,
+      requestId: crypto.randomUUID(),
+      docsUrl: route.docsUrl,
+    });
+  }
+
+  if (route.action === 'passthrough') {
+    return handlePassthroughRequest(request, config, upstreamPath, route.endpointGroup);
+  }
+
   const sourceAdapter = getAdapter(config.sourceProtocol);
   const targetAdapter = getAdapter(config.targetProtocol);
 
@@ -106,4 +121,82 @@ export async function handleProxyRequest(
   canonicalResponse.model = canonical.model;
 
   return sourceAdapter.serializeResponse(canonicalResponse);
+}
+
+async function handlePassthroughRequest(
+  request: Request,
+  config: NormalizedProxyConfig,
+  upstreamPath: string,
+  endpointGroup: string,
+): Promise<Response> {
+  const url = new URL(request.url);
+  const targetUrl = buildPassthroughUrl(config, upstreamPath, url.search);
+  const effectiveAuth = getEffectiveAuth(config.auth);
+  const headers = buildPassthroughHeaders(request.headers, effectiveAuth, config.targetProtocol);
+  const init: RequestInit = { method: request.method, headers };
+
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    if (effectiveAuth.type === 'aws') {
+      const body = await request.text();
+      const signed = await signRequest('POST', new URL(targetUrl), headers, body, {
+        accessKeyId: effectiveAuth.accessKeyId,
+        secretAccessKey: effectiveAuth.secretAccessKey,
+        sessionToken: effectiveAuth.sessionToken,
+        region: effectiveAuth.region,
+        service: 'bedrock-runtime',
+      });
+      Object.assign(headers, signed);
+      init.body = body;
+    } else {
+      init.body = request.body;
+    }
+  }
+
+  let upstreamResponse: Response;
+  try {
+    upstreamResponse = await withRetry(() => fetch(targetUrl, init));
+  } catch (err) {
+    if (err instanceof Error && 'code' in err && err.code === ErrorCode.RETRY_EXHAUSTED) throw err;
+    throw new Error(err instanceof Error ? err.message : 'Upstream passthrough request failed');
+  }
+
+  if (!upstreamResponse.ok) {
+    const errBody = await upstreamResponse.text();
+    if (upstreamResponse.status === 429) {
+      const retryAfter = upstreamResponse.headers.get('Retry-After');
+      return createErrorResponse(ErrorCode.RATE_LIMITED, `Upstream rate limited: ${errBody}`, retryAfter ? parseInt(retryAfter, 10) : undefined, {
+        provider: config.provider,
+        endpointGroup,
+        requestId: crypto.randomUUID(),
+      });
+    }
+    return createErrorResponse(ErrorCode.UPSTREAM_ERROR, `Upstream error ${upstreamResponse.status}: ${errBody}`, undefined, {
+      provider: config.provider,
+      endpointGroup,
+      requestId: crypto.randomUUID(),
+    });
+  }
+
+  return upstreamResponse;
+}
+
+function buildPassthroughHeaders(incoming: Headers, auth: ProtocolAuth, targetProtocol: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  incoming.forEach((value, key) => {
+    const lower = key.toLowerCase();
+    if (['host', 'content-length', 'authorization', 'x-api-key', 'api-key', 'x-goog-api-key'].includes(lower)) return;
+    headers[key] = value;
+  });
+
+  if (auth.type === 'bearer') {
+    if (targetProtocol === 'gemini') headers['x-goog-api-key'] = auth.token;
+    else headers['Authorization'] = `Bearer ${auth.token}`;
+  } else if (auth.type === 'x-api-key') {
+    headers['x-api-key'] = auth.key;
+    if (targetProtocol === 'anthropic' && !headers['anthropic-version']) headers['anthropic-version'] = '2023-06-01';
+  } else if (auth.type === 'azure') {
+    headers['api-key'] = auth.apiKey;
+  }
+
+  return headers;
 }

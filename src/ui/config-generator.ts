@@ -1,4 +1,6 @@
 import type { ProtocolId } from '../canonical/types.js';
+import { getProviderPreset } from '../config/catalog.js';
+import type { ProxyConfigInput } from '../config/types.js';
 
 export interface ConfigSnippets {
   proxyUrl: string;
@@ -7,15 +9,24 @@ export interface ConfigSnippets {
   openaiTS?: string;
   envBlock: string;
   curlExample: string;
+  notes: string[];
 }
 
-export function generateConfigSnippets(proxyUrl: string, sourceProtocol: ProtocolId): ConfigSnippets {
-  const baseUrl = proxyUrl.replace(/\/proxy\/[^/]+/, match => match); // keep full proxy URL
-
+export function generateConfigSnippets(proxyUrl: string, config: ProxyConfigInput | ProtocolId): ConfigSnippets {
+  const sourceProtocol = typeof config === 'string'
+    ? config
+    : config.version === 2 ? config.source.protocol : config.sourceProtocol;
+  const providerId = typeof config === 'string' ? undefined : config.version === 2 ? config.target.provider : config.targetProtocol;
+  const provider = providerId ? getProviderPreset(providerId) : undefined;
+  const model = getExampleModel(config);
   const snippets: ConfigSnippets = {
     proxyUrl,
     envBlock: '',
     curlExample: '',
+    notes: [
+      'proxy-placeholder can be any non-empty value; the upstream secret is encrypted in the proxy token.',
+      ...(provider ? [`Target provider: ${provider.name} (${provider.docsUrl})`] : []),
+    ],
   };
 
   if (sourceProtocol === 'anthropic') {
@@ -29,7 +40,7 @@ ANTHROPIC_API_KEY="proxy-placeholder"`;
   -H "Content-Type: application/json" \\
   -H "x-api-key: proxy-placeholder" \\
   -H "anthropic-version: 2023-06-01" \\
-  -d '{"model":"claude-sonnet-4-6","max_tokens":1024,"messages":[{"role":"user","content":"Hello!"}]}'`;
+  -d '{"model":"${model}","max_tokens":1024,"messages":[{"role":"user","content":"Hello!"}]}'`;
   } else if (sourceProtocol === 'openai' || sourceProtocol === 'mistral' || sourceProtocol === 'azure') {
     snippets.openaiPython = `from openai import OpenAI
 
@@ -39,7 +50,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="gpt-4o",
+    model="${model}",
     messages=[{"role": "user", "content": "Hello!"}]
 )`;
 
@@ -51,7 +62,7 @@ const client = new OpenAI({
 });
 
 const response = await client.chat.completions.create({
-  model: 'gpt-4o',
+  model: '${model}',
   messages: [{ role: 'user', content: 'Hello!' }],
 });`;
 
@@ -61,10 +72,10 @@ OPENAI_API_KEY="proxy-placeholder"`;
     snippets.curlExample = `curl -X POST "${proxyUrl}/v1/chat/completions" \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer proxy-placeholder" \\
-  -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hello!"}]}'`;
+  -d '{"model":"${model}","messages":[{"role":"user","content":"Hello!"}]}'`;
   } else if (sourceProtocol === 'gemini') {
     snippets.envBlock = `GEMINI_BASE_URL="${proxyUrl}"`;
-    snippets.curlExample = `curl -X POST "${proxyUrl}/v1beta/models/gemini-2.0-flash:generateContent" \\
+    snippets.curlExample = `curl -X POST "${proxyUrl}/v1beta/models/${model}:generateContent" \\
   -H "Content-Type: application/json" \\
   -H "x-goog-api-key: proxy-placeholder" \\
   -d '{"contents":[{"role":"user","parts":[{"text":"Hello!"}]}]}'`;
@@ -72,11 +83,26 @@ OPENAI_API_KEY="proxy-placeholder"`;
     snippets.envBlock = `OLLAMA_HOST="${proxyUrl}"`;
     snippets.curlExample = `curl -X POST "${proxyUrl}/api/chat" \\
   -H "Content-Type: application/json" \\
-  -d '{"model":"llama3.2","messages":[{"role":"user","content":"Hello!"}],"stream":false}'`;
+  -d '{"model":"${model}","messages":[{"role":"user","content":"Hello!"}],"stream":false}'`;
   } else {
     snippets.envBlock = `API_BASE_URL="${proxyUrl}"`;
     snippets.curlExample = `curl -X POST "${proxyUrl}" -H "Content-Type: application/json" -d '{}'`;
   }
 
   return snippets;
+}
+
+function getExampleModel(config: ProxyConfigInput | ProtocolId): string {
+  if (typeof config === 'string') {
+    if (config === 'anthropic') return 'claude-sonnet-4-5';
+    if (config === 'gemini') return 'gemini-2.5-flash';
+    if (config === 'ollama') return 'llama3.2';
+    return 'gpt-4.1';
+  }
+
+  const force = config.version === 2 && config.model.mode === 'force' ? config.model.force : undefined;
+  if (force) return force;
+
+  const providerId = config.version === 2 ? config.target.provider : config.targetProtocol;
+  return getProviderPreset(providerId)?.modelExamples[0] ?? 'gpt-4.1';
 }
