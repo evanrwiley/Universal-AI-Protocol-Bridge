@@ -10,7 +10,7 @@ const sampleConfig: ProxyConfig = {
   targetProtocol: 'openai',
   targetBaseUrl: 'https://api.openai.com/v1',
   auth: { type: 'bearer', token: 'sk-test-key' },
-  modelMap: { 'claude-sonnet-4-6': 'gpt-4o' },
+  modelMap: { 'claude-sonnet-4-5': 'gpt-4.1' },
 };
 
 describe('crypto', () => {

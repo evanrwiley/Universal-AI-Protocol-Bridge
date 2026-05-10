@@ -155,7 +155,7 @@ describe('OpenAI Inbound: tool calls only (no text)', () => {
 describe('Anthropic Inbound: block type distinction', () => {
   it('emits content_block_end for text, tool_call_end for tool_use', async () => {
     const chunks = [
-      sse(JSON.stringify({ type: 'message_start', message: { id: 'msg_1', model: 'claude-sonnet-4-6', usage: { input_tokens: 10 } } }), 'message_start'),
+      sse(JSON.stringify({ type: 'message_start', message: { id: 'msg_1', model: 'claude-sonnet-4-5', usage: { input_tokens: 10 } } }), 'message_start'),
       sse(JSON.stringify({ type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }), 'content_block_start'),
       sse(JSON.stringify({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Hello' } }), 'content_block_delta'),
       sse(JSON.stringify({ type: 'content_block_stop', index: 0 }), 'content_block_stop'),

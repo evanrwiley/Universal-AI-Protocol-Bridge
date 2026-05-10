@@ -1,5 +1,6 @@
 import type { Env } from './config/types.js';
 import { decryptConfig } from './config/crypto.js';
+import { normalizeProxyConfig } from './config/normalize.js';
 import { ErrorCode, createErrorResponse } from './config/errors.js';
 import { handleUIRequest } from './ui/handler.js';
 import { handleProxyRequest } from './proxy/handler.js';
@@ -34,14 +35,14 @@ export default {
       return new Response(null, {
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': '*',
           'Access-Control-Max-Age': '86400',
         },
       });
     }
 
-    // UI routes: /, /api/generate-url, /api/protocols
+    // UI routes: /, /api/generate-url, /api/catalog, /api/protocols
     if (path === '/' || path.startsWith('/api/')) {
       const response = await handleUIRequest(request, env);
       return addCORSHeaders(response);
@@ -57,7 +58,7 @@ export default {
 
       let config;
       try {
-        config = await decryptConfig(token, env.WORKER_SECRET);
+        config = normalizeProxyConfig(await decryptConfig(token, env.WORKER_SECRET));
       } catch {
         return addCORSHeaders(createErrorResponse(ErrorCode.INVALID_TOKEN, 'Invalid or expired proxy token'));
       }
@@ -76,6 +77,10 @@ export default {
       }
     }
 
+    if (env.ASSETS) {
+      return addCORSHeaders(await env.ASSETS.fetch(request));
+    }
+
     return addCORSHeaders(new Response('Not Found', { status: 404 }));
   },
 } satisfies ExportedHandler<Env>;
@@ -85,4 +90,3 @@ function addCORSHeaders(response: Response): Response {
   headers.set('Access-Control-Allow-Origin', '*');
   return new Response(response.body, { status: response.status, headers });
 }
-

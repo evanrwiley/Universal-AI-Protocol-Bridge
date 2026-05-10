@@ -8,6 +8,7 @@ export enum ErrorCode {
   UPSTREAM_TIMEOUT = 'UPSTREAM_TIMEOUT',
   INTERNAL_ERROR = 'INTERNAL_ERROR',
   RETRY_EXHAUSTED = 'RETRY_EXHAUSTED',
+  UNSUPPORTED_ENDPOINT = 'UNSUPPORTED_ENDPOINT',
 }
 
 export interface ErrorCodeMetadata {
@@ -25,6 +26,7 @@ export const ERROR_METADATA: Record<ErrorCode, ErrorCodeMetadata> = {
   [ErrorCode.UPSTREAM_TIMEOUT]: { code: ErrorCode.UPSTREAM_TIMEOUT, status: 504 },
   [ErrorCode.INTERNAL_ERROR]: { code: ErrorCode.INTERNAL_ERROR, status: 500 },
   [ErrorCode.RETRY_EXHAUSTED]: { code: ErrorCode.RETRY_EXHAUSTED, status: 503 },
+  [ErrorCode.UNSUPPORTED_ENDPOINT]: { code: ErrorCode.UNSUPPORTED_ENDPOINT, status: 400 },
 };
 
 export function getErrorCodeStatus(code: ErrorCode): number {
@@ -35,17 +37,33 @@ export interface ErrorResponse {
   error_code: ErrorCode;
   message: string;
   retry_after?: number;
+  provider?: string;
+  endpoint_group?: string;
+  request_id?: string;
+  docs_url?: string;
+}
+
+export interface ErrorDetails {
+  provider?: string;
+  endpointGroup?: string;
+  requestId?: string;
+  docsUrl?: string;
 }
 
 export function createErrorResponse(
   code: ErrorCode,
   message: string,
   retryAfter?: number,
+  details: ErrorDetails = {},
 ): Response {
   const body: ErrorResponse = {
     error_code: code,
     message,
     ...(retryAfter !== undefined && { retry_after: retryAfter }),
+    ...(details.provider !== undefined && { provider: details.provider }),
+    ...(details.endpointGroup !== undefined && { endpoint_group: details.endpointGroup }),
+    ...(details.requestId !== undefined && { request_id: details.requestId }),
+    ...(details.docsUrl !== undefined && { docs_url: details.docsUrl }),
   };
 
   const status = getErrorCodeStatus(code);
