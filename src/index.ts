@@ -88,21 +88,23 @@ const worker = {
 
 // Sentry error monitoring: DSN read from the SENTRY_DSN env var; no-op when unset.
 // Requests bodies/query strings are NOT sent (may contain proxy tokens / API keys).
+const maskProxyToken = (event: { request?: { url?: string }; transaction?: string }) => {
+  if (event.request?.url) {
+    event.request.url = event.request.url.replace(/\/proxy\/[^/]+/, "/proxy/{token}");
+  }
+  if (event.transaction) {
+    event.transaction = event.transaction.replace(/\/proxy\/[^/]+/, "/proxy/{token}");
+  }
+  return event;
+};
+
 export default withSentry<Env>(
   (env) => ({
     dsn: env.SENTRY_DSN,
-    tracesSampleRate: 1.0,
+    tracesSampleRate: 0.1,
     requestDataOptions: { include: { data: false, query_string: false } },
-    beforeSend: (event) => {
-      // Mask proxy tokens in URLs and transaction names for ALL event types.
-      if (event.request?.url) {
-        event.request.url = event.request.url.replace(/\/proxy\/[^/]+/, "/proxy/{token}");
-      }
-      if (event.transaction) {
-        event.transaction = event.transaction.replace(/\/proxy\/[^/]+/, "/proxy/{token}");
-      }
-      return event;
-    },
+    beforeSend: maskProxyToken,
+    beforeSendTransaction: maskProxyToken,
   }),
   worker,
 );
