@@ -13,6 +13,7 @@
     "type-check": "tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
+    "@sentry/cloudflare": "^10.70.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

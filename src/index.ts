@@ -1,4 +1,5 @@
 import type { Env } from './config/types.js';
+import { withSentry } from "@sentry/cloudflare";
 import { decryptConfig } from './config/crypto.js';
 import { normalizeProxyConfig } from './config/normalize.js';
 import { ErrorCode, createErrorResponse } from './config/errors.js';
@@ -25,7 +26,7 @@ registerAdapter(ollamaAdapter);
 registerAdapter(cohereAdapter);
 registerAdapter(mistralAdapter);
 
-export default {
+const worker = {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -84,6 +85,12 @@ export default {
     return addCORSHeaders(new Response('Not Found', { status: 404 }));
   },
 } satisfies ExportedHandler<Env>;
+
+// Sentry error monitoring: DSN read from the SENTRY_DSN env var; no-op when unset.
+export default withSentry<Env>(
+  (env) => ({ dsn: env.SENTRY_DSN, tracesSampleRate: 1.0 }),
+  worker,
+);
 
 function addCORSHeaders(response: Response): Response {
   const headers = new Headers(response.headers);

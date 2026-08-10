@@ -85,4 +85,5 @@ export interface NormalizedProxyConfig extends ProxyConfig {
 export interface Env {
   WORKER_SECRET: string;
   ASSETS?: Fetcher;
+  SENTRY_DSN?: string; // optional Sentry error monitoring DSN
 }
