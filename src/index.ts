@@ -93,10 +93,13 @@ export default withSentry<Env>(
     dsn: env.SENTRY_DSN,
     tracesSampleRate: 1.0,
     requestDataOptions: { include: { data: false, query_string: false } },
-    beforeSendTransaction: (event) => {
-      // Mask proxy tokens in request URLs before sending.
+    beforeSend: (event) => {
+      // Mask proxy tokens in URLs and transaction names for ALL event types.
       if (event.request?.url) {
         event.request.url = event.request.url.replace(/\/proxy\/[^/]+/, "/proxy/{token}");
+      }
+      if (event.transaction) {
+        event.transaction = event.transaction.replace(/\/proxy\/[^/]+/, "/proxy/{token}");
       }
       return event;
     },
