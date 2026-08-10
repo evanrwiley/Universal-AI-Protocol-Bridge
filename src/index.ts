@@ -87,8 +87,20 @@ const worker = {
 } satisfies ExportedHandler<Env>;
 
 // Sentry error monitoring: DSN read from the SENTRY_DSN env var; no-op when unset.
+// Requests bodies/query strings are NOT sent (may contain proxy tokens / API keys).
 export default withSentry<Env>(
-  (env) => ({ dsn: env.SENTRY_DSN, tracesSampleRate: 1.0 }),
+  (env) => ({
+    dsn: env.SENTRY_DSN,
+    tracesSampleRate: 1.0,
+    requestDataOptions: { include: { data: false, query_string: false } },
+    beforeSendTransaction: (event) => {
+      // Mask proxy tokens in request URLs before sending.
+      if (event.request?.url) {
+        event.request.url = event.request.url.replace(/\/proxy\/[^/]+/, "/proxy/{token}");
+      }
+      return event;
+    },
+  }),
   worker,
 );
 
