@@ -88,7 +88,9 @@ const worker = {
 
 // Sentry error monitoring: DSN read from the SENTRY_DSN env var; no-op when unset.
 // Requests bodies/query strings are NOT sent (may contain proxy tokens / API keys).
-const maskProxyToken = (event: { request?: { url?: string }; transaction?: string }) => {
+const maskProxyToken = <T extends { request?: { url?: string }; transaction?: string }>(
+  event: T,
+): T => {
   if (event.request?.url) {
     event.request.url = event.request.url.replace(/\/proxy\/[^/]+/, "/proxy/{token}");
   }
