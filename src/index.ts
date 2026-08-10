@@ -104,7 +104,7 @@ export default withSentry<Env>(
   (env) => ({
     dsn: env.SENTRY_DSN,
     tracesSampleRate: 0.1,
-    requestDataOptions: { include: { data: false, query_string: false } },
+    requestDataOptions: { include: { data: false, query_string: false, headers: false } },
     beforeSend: maskProxyToken,
     beforeSendTransaction: maskProxyToken,
   }),
