@@ -13,3 +13,6 @@ not_found_handling = "single-page-application"
 
 # WORKER_SECRET must be set via: wrangler secret put WORKER_SECRET
 # Never store secrets in this file
+
+[vars]
+SENTRY_DSN = "https://fc402a14eb5a9b2e0804a4234a6fa729@o4511882023731200.ingest.us.sentry.io/4511888121593856"  # public key; error monitoring DSN
