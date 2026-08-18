@@ -1,5 +1,10 @@
 # Universal AI Protocol Bridge
 
+> [!WARNING]
+> **本项目已归档 (Archived)**
+>
+> 归档原因：现在的替代品太多了，没必要用，半年过去了。不再进行任何维护与更新。
+
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/LING71671/Universal-AI-Protocol-Bridge)
 
 UAIPB 是一个运行在 Cloudflare Workers 上的 AI 协议网关。它把聊天类 API 在 OpenAI、Anthropic、Gemini、Bedrock、Azure OpenAI、Ollama、Cohere、Mistral 等协议之间转换，同时对不能安全互转的官方端点提供原生透传或明确错误。
